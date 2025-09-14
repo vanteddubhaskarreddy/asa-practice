@@ -1,0 +1,37 @@
+{
+	"name": "adls_training_raw_bikeshare_Dynamic",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"year_in_folder_name": {
+				"type": "string",
+				"defaultValue": "2010"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "*.csv",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@concat('raw/bike_share/', dataset().year_in_folder_name, '-capitalbikeshare-tripdata')",
+					"type": "Expression"
+				},
+				"fileSystem": "training"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

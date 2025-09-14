@@ -1,0 +1,67 @@
+{
+	"name": "sqlPool_asa_dedicated_milgard_dynamic",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "asa_dedicated_sql_pool",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"table_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlDWTable",
+		"schema": [
+			{
+				"name": "Duration",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "StartDate",
+				"type": "datetime2",
+				"scale": 7
+			},
+			{
+				"name": "EndDate",
+				"type": "datetime2",
+				"scale": 7
+			},
+			{
+				"name": "StartStationNumber",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "StartStation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "EndStationNumber",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "EndStation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "BikeNumber",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MemberType",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": {
+				"value": "@dataset().table_name",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

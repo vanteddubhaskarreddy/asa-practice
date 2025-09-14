@@ -1,0 +1,50 @@
+{
+	"name": "Dataflow11",
+	"properties": {
+		"type": "Flowlet",
+		"typeProperties": {
+			"sources": [],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "aggregate1"
+				},
+				{
+					"name": "input1"
+				},
+				{
+					"name": "output1"
+				}
+			],
+			"scriptLines": [
+				"input(output(",
+				"          {Line Number} as short,",
+				"          Year as short,",
+				"          Month as string,",
+				"          State as string,",
+				"          {Labor Force} as integer,",
+				"          Employed as integer,",
+				"          Unemployed as integer,",
+				"          {Unemployment Rate} as double,",
+				"          Industry as string,",
+				"          Gender as string,",
+				"          {Education Level} as string,",
+				"          {Date Inserted} as date,",
+				"          InsertSource as string,",
+				"          {Data Version} as string,",
+				"          {Access Permission} as string,",
+				"          {Update Frequency} as string,",
+				"          {Aggregation Level} as string,",
+				"          {Data Accuracy} as string",
+				"     ),",
+				"     order: 0,",
+				"     allowSchemaDrift: true) ~> input1",
+				"input1 aggregate(groupBy(State,",
+				"          Year),",
+				"     average_unemployment_rate = avg({Unemployment Rate}),",
+				"          sum_unemployed = sum(Unemployed)) ~> aggregate1",
+				"aggregate1 output() ~> output1"
+			]
+		}
+	}
+}

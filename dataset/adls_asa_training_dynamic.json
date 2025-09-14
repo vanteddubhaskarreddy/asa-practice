@@ -1,0 +1,71 @@
+{
+	"name": "adls_asa_training_dynamic",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"folder_name": {
+				"type": "string",
+				"defaultValue": "raw"
+			},
+			"file_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "Unemployment.csv",
+				"folderPath": "raw/unemployement",
+				"fileSystem": "training"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "Duration",
+				"type": "String"
+			},
+			{
+				"name": "Start date",
+				"type": "String"
+			},
+			{
+				"name": "End date",
+				"type": "String"
+			},
+			{
+				"name": "Start station number",
+				"type": "String"
+			},
+			{
+				"name": "Start station",
+				"type": "String"
+			},
+			{
+				"name": "End station number",
+				"type": "String"
+			},
+			{
+				"name": "End station",
+				"type": "String"
+			},
+			{
+				"name": "Bike number",
+				"type": "String"
+			},
+			{
+				"name": "Member type",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

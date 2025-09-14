@@ -1,0 +1,56 @@
+{
+	"name": "Pipeline 1",
+	"properties": {
+		"activities": [
+			{
+				"name": "Data flow1",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "Dataflow1",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"source1": {
+								"folder_name": "training/raw/unemployment",
+								"file_name": "Unemployment.csv"
+							},
+							"sink1": {
+								"table_name": "highUnemployment"
+							},
+							"sink2": {
+								"table_name": "mediumUnemployment"
+							},
+							"sink3": {
+								"table_name": "lowUnemployment"
+							}
+						}
+					},
+					"staging": {
+						"linkedService": {
+							"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+							"type": "LinkedServiceReference"
+						},
+						"folderPath": "training/raw/staging"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-09-14T19:26:06Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

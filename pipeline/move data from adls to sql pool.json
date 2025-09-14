@@ -1,0 +1,266 @@
+{
+	"name": "move data from adls to sql pool",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Metadata1",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "adla_asa_training_raw_Dynamic",
+						"type": "DatasetReference",
+						"parameters": {
+							"folder_name": "bike_share"
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Script1",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultSqlServer",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"DBName": "az_dedicated_sql_pool_for_milgard_practice"
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": "SELECT \n    YEAR(MAX(StartDate)) AS MaxYear\nFROM dbo.bikeshare_raw"
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get Metadata1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "Script1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get Metadata1').output.childItems",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "If Condition1",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@greater(\n    int(\n            substring(\n                item().name,0,4\n            )\n    ), \n    int(activity('Script1').output.resultSets[0].rows[0].MaxYear)\n)",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "Copy data2",
+										"type": "Copy",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"source": {
+												"type": "DelimitedTextSource",
+												"storeSettings": {
+													"type": "AzureBlobFSReadSettings",
+													"recursive": true,
+													"wildcardFolderPath": {
+														"value": "@concat('raw/bike_share/', item().name)",
+														"type": "Expression"
+													},
+													"wildcardFileName": "*",
+													"enablePartitionDiscovery": false
+												},
+												"formatSettings": {
+													"type": "DelimitedTextReadSettings"
+												}
+											},
+											"sink": {
+												"type": "SqlPoolSink",
+												"allowCopyCommand": true
+											},
+											"enableStaging": true,
+											"stagingSettings": {
+												"linkedServiceName": {
+													"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+													"type": "LinkedServiceReference"
+												},
+												"path": "training/staging"
+											},
+											"translator": {
+												"type": "TabularTranslator",
+												"mappings": [
+													{
+														"source": {
+															"name": "Duration",
+															"type": "String"
+														},
+														"sink": {
+															"name": "Duration",
+															"type": "Int32"
+														}
+													},
+													{
+														"source": {
+															"name": "Start date",
+															"type": "String"
+														},
+														"sink": {
+															"name": "StartDate",
+															"type": "DateTime"
+														}
+													},
+													{
+														"source": {
+															"name": "End date",
+															"type": "String"
+														},
+														"sink": {
+															"name": "EndDate",
+															"type": "DateTime"
+														}
+													},
+													{
+														"source": {
+															"name": "Start station number",
+															"type": "String"
+														},
+														"sink": {
+															"name": "StartStationNumber",
+															"type": "Int32"
+														}
+													},
+													{
+														"source": {
+															"name": "Start station",
+															"type": "String"
+														},
+														"sink": {
+															"name": "StartStation",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "End station number",
+															"type": "String"
+														},
+														"sink": {
+															"name": "EndStationNumber",
+															"type": "Int32"
+														}
+													},
+													{
+														"source": {
+															"name": "End station",
+															"type": "String"
+														},
+														"sink": {
+															"name": "EndStation",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Bike number",
+															"type": "String"
+														},
+														"sink": {
+															"name": "BikeNumber",
+															"type": "String"
+														}
+													},
+													{
+														"source": {
+															"name": "Member type",
+															"type": "String"
+														},
+														"sink": {
+															"name": "MemberType",
+															"type": "String"
+														}
+													}
+												]
+											}
+										},
+										"inputs": [
+											{
+												"referenceName": "adls_training_raw_bikeshare_Dynamic",
+												"type": "DatasetReference",
+												"parameters": {
+													"year_in_folder_name": "@substring(item().name, 0, 4)"
+												}
+											}
+										],
+										"outputs": [
+											{
+												"referenceName": "az_synapse_dedicated_sql_pool_1",
+												"type": "DatasetReference"
+											}
+										]
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-09-14T05:32:36Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}

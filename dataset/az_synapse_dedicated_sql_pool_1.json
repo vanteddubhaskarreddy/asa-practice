@@ -1,0 +1,59 @@
+{
+	"name": "az_synapse_dedicated_sql_pool_1",
+	"properties": {
+		"annotations": [],
+		"type": "SqlPoolTable",
+		"schema": [
+			{
+				"name": "Duration",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "StartDate",
+				"type": "datetime2",
+				"scale": 7
+			},
+			{
+				"name": "EndDate",
+				"type": "datetime2",
+				"scale": 7
+			},
+			{
+				"name": "StartStationNumber",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "StartStation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "EndStationNumber",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "EndStation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "BikeNumber",
+				"type": "nvarchar"
+			},
+			{
+				"name": "MemberType",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "bikeshare_raw"
+		},
+		"sqlPool": {
+			"referenceName": "az_dedicated_sql_pool_for_milgard_practice",
+			"type": "SqlPoolReference"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

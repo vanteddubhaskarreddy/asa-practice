@@ -1,0 +1,178 @@
+{
+	"name": "Dataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "adls_asa_training_dynamic",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "sqlPool_asa_dedicated_milgard_dynamic",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "sqlPool_asa_dedicated_milgard_dynamic",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				},
+				{
+					"dataset": {
+						"referenceName": "sqlPool_asa_dedicated_milgard_dynamic",
+						"type": "DatasetReference"
+					},
+					"name": "sink3"
+				}
+			],
+			"transformations": [
+				{
+					"name": "flowlet1",
+					"flowlet": {
+						"referenceName": "Dataflow11",
+						"type": "DataFlowReference"
+					}
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "split1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          {Line Number} as short,",
+				"          Year as short,",
+				"          Month as string,",
+				"          State as string,",
+				"          {Labor Force} as integer,",
+				"          Employed as integer,",
+				"          Unemployed as integer,",
+				"          {Unemployment Rate} as double,",
+				"          Industry as string,",
+				"          Gender as string,",
+				"          {Education Level} as string,",
+				"          {Date Inserted} as date,",
+				"          InsertSource as string,",
+				"          {Data Version} as string,",
+				"          {Access Permission} as string,",
+				"          {Update Frequency} as string,",
+				"          {Aggregation Level} as string,",
+				"          {Data Accuracy} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source1",
+				"derivedColumn1 compose(mapColumn(",
+				"          {Line Number},",
+				"          Year,",
+				"          Month,",
+				"          State,",
+				"          {Labor Force},",
+				"          Employed,",
+				"          Unemployed,",
+				"          {Unemployment Rate},",
+				"          Industry,",
+				"          Gender,",
+				"          {Education Level},",
+				"          {Date Inserted},",
+				"          InsertSource,",
+				"          {Data Version},",
+				"          {Access Permission},",
+				"          {Update Frequency},",
+				"          {Aggregation Level},",
+				"          {Data Accuracy}",
+				"     ),",
+				"     composition: 'Dataflow11') ~> flowlet1@(output1)",
+				"source1 derive(Year_Month = concatWS('-', toString(Year), Month),",
+				"          Employment_Rate = (Employed/{Labor Force})*100) ~> derivedColumn1",
+				"flowlet1@output1 split(average_unemployment_rate>7,",
+				"     and(average_unemployment_rate>4, average_unemployment_rate <=7),",
+				"     disjoint: false) ~> split1@(highUnemplyement, mediumUnemployement, lowUnemployement)",
+				"split1@highUnemplyement sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Duration as integer,",
+				"          StartDate as timestamp,",
+				"          EndDate as timestamp,",
+				"          StartStationNumber as integer,",
+				"          StartStation as string,",
+				"          EndStationNumber as integer,",
+				"          EndStation as string,",
+				"          BikeNumber as string,",
+				"          MemberType as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     preSQLs:['CREATE TABLE dbo.highUnemployement(    \\nState NVARCHAR(2),    \\nYear INT,    \\naverage_unemployment_rate FLOAT,    \\nsum_unemployed INT\\n)\\nWITH(\\nDISTRIBUTION = HASH(state),\\nCLUSTERED COLUMSTORE INDEX\\n);'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1",
+				"split1@mediumUnemployement sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Duration as integer,",
+				"          StartDate as timestamp,",
+				"          EndDate as timestamp,",
+				"          StartStationNumber as integer,",
+				"          StartStation as string,",
+				"          EndStationNumber as integer,",
+				"          EndStation as string,",
+				"          BikeNumber as string,",
+				"          MemberType as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     preSQLs:['CREATE TABLE dbo.mediumUnemployement(    \\nState NVARCHAR(2),    \\nYear INT,    \\naverage_unemployment_rate FLOAT,    \\nsum_unemployed INT\\n)\\nWITH(\\nDISTRIBUTION = HASH(state),\\nCLUSTERED COLUMSTORE INDEX\\n);'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink2",
+				"split1@lowUnemployement sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          Duration as integer,",
+				"          StartDate as timestamp,",
+				"          EndDate as timestamp,",
+				"          StartStationNumber as integer,",
+				"          StartStation as string,",
+				"          EndStationNumber as integer,",
+				"          EndStation as string,",
+				"          BikeNumber as string,",
+				"          MemberType as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     preSQLs:['CREATE TABLE dbo.lowUnemployement(    \\nState NVARCHAR(2),    \\nYear INT,    \\naverage_unemployment_rate FLOAT,    \\nsum_unemployed INT\\n)\\nWITH(\\nDISTRIBUTION = HASH(state),\\nCLUSTERED COLUMSTORE INDEX\\n);'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink3"
+			]
+		}
+	}
+}
