@@ -1,0 +1,1652 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "asa-workspace-practice-milgard-1"
+		},
+		"asa-workspace-practice-milgard-1-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'asa-workspace-practice-milgard-1-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:asa-workspace-practice-milgard-1.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"asa_dedicated_sql_pool_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'asa_dedicated_sql_pool'"
+		},
+		"asa-workspace-practice-milgard-1-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://practicestoragemilgard.dfs.core.windows.net"
+		},
+		"asa_dedicated_sql_pool_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "tcp:asa-workspace-practice-milgard-1.sql.azuresynapse.net,1433"
+		},
+		"asa_dedicated_sql_pool_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "az_dedicated_sql_pool_for_milgard_practice"
+		},
+		"asa_dedicated_sql_pool_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "sqladminuser"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/az_dedicated_sql_pool_for_milgard_practice')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Pipeline 1')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "Dataflow1",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"source1": {
+										"folder_name": "training/raw/unemployment",
+										"file_name": "Unemployment.csv"
+									},
+									"sink1": {
+										"table_name": "highUnemployment"
+									},
+									"sink2": {
+										"table_name": "mediumUnemployment"
+									},
+									"sink3": {
+										"table_name": "lowUnemployment"
+									}
+								}
+							},
+							"staging": {
+								"linkedService": {
+									"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+									"type": "LinkedServiceReference"
+								},
+								"folderPath": "training/raw/staging"
+							},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-09-14T19:26:06Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/dataflows/Dataflow1')]",
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/delete folders from raw')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Metadata raw",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "Dadla_asa_milgard_training_raw",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata raw",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Metadata raw').output.childItems",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "If Condition1",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@not(\n    contains(\n        variables('allowedItems'), \n        item().name\n        )\n    )",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Delete1",
+												"type": "Delete",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"dataset": {
+														"referenceName": "adls_asa_milgard_training",
+														"type": "DatasetReference",
+														"parameters": {
+															"foldername": {
+																"value": "@item().name",
+																"type": "Expression"
+															}
+														}
+													},
+													"logStorageSettings": {
+														"linkedServiceName": {
+															"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+															"type": "LinkedServiceReference"
+														},
+														"path": "training/logs"
+													},
+													"enableLogging": true,
+													"storeSettings": {
+														"type": "AzureBlobFSReadSettings",
+														"recursive": true,
+														"enablePartitionDiscovery": false
+													}
+												}
+											}
+										]
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"allowedItems": {
+						"type": "Array",
+						"defaultValue": [
+							"adventure_works",
+							"bike_share",
+							"fairy_tail_qa"
+						]
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-09-13T22:21:52Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/Dadla_asa_milgard_training_raw')]",
+				"[concat(variables('workspaceId'), '/datasets/adls_asa_milgard_training')]",
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/move data from adls to sql pool')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Metadata1",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "adla_asa_training_raw_Dynamic",
+								"type": "DatasetReference",
+								"parameters": {
+									"folder_name": "bike_share"
+								}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "Script1",
+						"type": "Script",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultSqlServer",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"DBName": "az_dedicated_sql_pool_for_milgard_practice"
+							}
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": "SELECT \n    YEAR(MAX(StartDate)) AS MaxYear\nFROM dbo.bikeshare_raw"
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Script1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Metadata1').output.childItems",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "If Condition1",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@greater(\n    int(\n            substring(\n                item().name,0,4\n            )\n    ), \n    int(activity('Script1').output.resultSets[0].rows[0].MaxYear)\n)",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Copy data2",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "AzureBlobFSReadSettings",
+															"recursive": true,
+															"wildcardFolderPath": {
+																"value": "@concat('raw/bike_share/', item().name)",
+																"type": "Expression"
+															},
+															"wildcardFileName": "*",
+															"enablePartitionDiscovery": false
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "SqlPoolSink",
+														"allowCopyCommand": true,
+														"copyCommandSettings": {}
+													},
+													"enableStaging": true,
+													"stagingSettings": {
+														"linkedServiceName": {
+															"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+															"type": "LinkedServiceReference"
+														},
+														"path": "training/staging"
+													},
+													"translator": {
+														"type": "TabularTranslator",
+														"mappings": [
+															{
+																"source": {
+																	"name": "Duration",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "Duration",
+																	"type": "Int32"
+																}
+															},
+															{
+																"source": {
+																	"name": "Start date",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "StartDate",
+																	"type": "DateTime"
+																}
+															},
+															{
+																"source": {
+																	"name": "End date",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "EndDate",
+																	"type": "DateTime"
+																}
+															},
+															{
+																"source": {
+																	"name": "Start station number",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "StartStationNumber",
+																	"type": "Int32"
+																}
+															},
+															{
+																"source": {
+																	"name": "Start station",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "StartStation",
+																	"type": "String"
+																}
+															},
+															{
+																"source": {
+																	"name": "End station number",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "EndStationNumber",
+																	"type": "Int32"
+																}
+															},
+															{
+																"source": {
+																	"name": "End station",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "EndStation",
+																	"type": "String"
+																}
+															},
+															{
+																"source": {
+																	"name": "Bike number",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "BikeNumber",
+																	"type": "String"
+																}
+															},
+															{
+																"source": {
+																	"name": "Member type",
+																	"type": "String"
+																},
+																"sink": {
+																	"name": "MemberType",
+																	"type": "String"
+																}
+															}
+														]
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "adls_training_raw_bikeshare_Dynamic",
+														"type": "DatasetReference",
+														"parameters": {
+															"year_in_folder_name": "@substring(item().name, 0, 4)"
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "az_synapse_dedicated_sql_pool_1",
+														"type": "DatasetReference",
+														"parameters": {}
+													}
+												]
+											}
+										]
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-09-14T05:32:36Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/adla_asa_training_raw_Dynamic')]",
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultSqlServer')]",
+				"[concat(variables('workspaceId'), '/datasets/adls_training_raw_bikeshare_Dynamic')]",
+				"[concat(variables('workspaceId'), '/datasets/az_synapse_dedicated_sql_pool_1')]",
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/move folder to raw')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Metadata raw",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "Dadla_asa_milgard_training_raw",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "ForEach1",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata raw",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "Get Metadata root",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('Get Metadata root').output.childItems",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "If Condition1",
+									"type": "IfCondition",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"expression": {
+											"value": "@and(not(\n        contains(\n            activity('Get Metadata raw').output.childItems, \n            item()\n        )\n    ),\n    not(\n        contains(\n            variables('not_allowed_items'), \n            item().name\n        )\n    )\n)",
+											"type": "Expression"
+										},
+										"ifTrueActivities": [
+											{
+												"name": "Copy data1",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "DelimitedTextSource",
+														"storeSettings": {
+															"type": "AzureBlobFSReadSettings",
+															"recursive": true,
+															"wildcardFolderPath": {
+																"value": "@item().name",
+																"type": "Expression"
+															},
+															"wildcardFileName": "*",
+															"enablePartitionDiscovery": false
+														},
+														"formatSettings": {
+															"type": "DelimitedTextReadSettings"
+														}
+													},
+													"sink": {
+														"type": "DelimitedTextSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings",
+															"copyBehavior": "PreserveHierarchy"
+														},
+														"formatSettings": {
+															"type": "DelimitedTextWriteSettings",
+															"quoteAllText": true,
+															"fileExtension": ".txt"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "adls_asa_milgard_training_1",
+														"type": "DatasetReference",
+														"parameters": {}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "adls_asa_milgard_training",
+														"type": "DatasetReference",
+														"parameters": {
+															"foldername": {
+																"value": "@item().name",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											}
+										]
+									}
+								}
+							]
+						}
+					},
+					{
+						"name": "Get Metadata root",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "adls_asa_milgard_training_1",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"not_allowed_items": {
+						"type": "Array",
+						"defaultValue": [
+							"logs",
+							"raw"
+						]
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2025-09-13T22:21:44Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/Dadla_asa_milgard_training_raw')]",
+				"[concat(variables('workspaceId'), '/datasets/adls_asa_milgard_training_1')]",
+				"[concat(variables('workspaceId'), '/datasets/adls_asa_milgard_training')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Dadla_asa_milgard_training_raw')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "raw",
+						"fileSystem": "training"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adla_asa_training_raw_Dynamic')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"folder_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().folder_name",
+							"type": "Expression"
+						},
+						"fileSystem": "training"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adls_asa_milgard_training')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"foldername": {
+						"type": "string",
+						"defaultValue": "placeholder"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@concat('raw/', dataset().foldername)",
+							"type": "Expression"
+						},
+						"fileSystem": "training"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Duration",
+						"type": "String"
+					},
+					{
+						"name": "Start date",
+						"type": "String"
+					},
+					{
+						"name": "End date",
+						"type": "String"
+					},
+					{
+						"name": "Start station number",
+						"type": "String"
+					},
+					{
+						"name": "Start station",
+						"type": "String"
+					},
+					{
+						"name": "End station number",
+						"type": "String"
+					},
+					{
+						"name": "End station",
+						"type": "String"
+					},
+					{
+						"name": "Bike number",
+						"type": "String"
+					},
+					{
+						"name": "Member type",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adls_asa_milgard_training_1')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileSystem": "training"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adls_asa_milgard_training_raw')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "raw",
+						"fileSystem": "training"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adls_asa_milgard_training_raw_dynamic')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"foldername": {
+						"type": "string",
+						"defaultValue": "placeholder"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@concat('raw/', dataset().foldername)",
+							"type": "Expression"
+						},
+						"fileSystem": "training"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Duration",
+						"type": "String"
+					},
+					{
+						"name": "Start date",
+						"type": "String"
+					},
+					{
+						"name": "End date",
+						"type": "String"
+					},
+					{
+						"name": "Start station number",
+						"type": "String"
+					},
+					{
+						"name": "Start station",
+						"type": "String"
+					},
+					{
+						"name": "End station number",
+						"type": "String"
+					},
+					{
+						"name": "End station",
+						"type": "String"
+					},
+					{
+						"name": "Bike number",
+						"type": "String"
+					},
+					{
+						"name": "Member type",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adls_asa_training_dynamic')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"folder_name": {
+						"type": "string",
+						"defaultValue": "raw"
+					},
+					"file_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Unemployment.csv",
+						"folderPath": "raw/unemployement",
+						"fileSystem": "training"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Duration",
+						"type": "String"
+					},
+					{
+						"name": "Start date",
+						"type": "String"
+					},
+					{
+						"name": "End date",
+						"type": "String"
+					},
+					{
+						"name": "Start station number",
+						"type": "String"
+					},
+					{
+						"name": "Start station",
+						"type": "String"
+					},
+					{
+						"name": "End station number",
+						"type": "String"
+					},
+					{
+						"name": "End station",
+						"type": "String"
+					},
+					{
+						"name": "Bike number",
+						"type": "String"
+					},
+					{
+						"name": "Member type",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adls_asa_training_folder_dynamic')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"folder_name": {
+						"type": "string",
+						"defaultValue": "raw/staging"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().folder_name",
+							"type": "Expression"
+						},
+						"fileSystem": "training"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/adls_training_raw_bikeshare_Dynamic')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa-workspace-practice-milgard-1-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"year_in_folder_name": {
+						"type": "string",
+						"defaultValue": "2010"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "*.csv",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@concat('raw/bike_share/', dataset().year_in_folder_name, '-capitalbikeshare-tripdata')",
+							"type": "Expression"
+						},
+						"fileSystem": "training"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/az_synapse_dedicated_sql_pool_1')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "SqlPoolTable",
+				"schema": [
+					{
+						"name": "Duration",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "StartDate",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "EndDate",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "StartStationNumber",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "StartStation",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EndStationNumber",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "EndStation",
+						"type": "nvarchar"
+					},
+					{
+						"name": "BikeNumber",
+						"type": "nvarchar"
+					},
+					{
+						"name": "MemberType",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "bikeshare_raw"
+				},
+				"sqlPool": {
+					"referenceName": "az_dedicated_sql_pool_for_milgard_practice",
+					"type": "SqlPoolReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/sqlPools/az_dedicated_sql_pool_for_milgard_practice')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/sqlPool_asa_dedicated_milgard_dynamic')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "asa_dedicated_sql_pool",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"table_name": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "Duration",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "StartDate",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "EndDate",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "StartStationNumber",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "StartStation",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EndStationNumber",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "EndStation",
+						"type": "nvarchar"
+					},
+					{
+						"name": "BikeNumber",
+						"type": "nvarchar"
+					},
+					{
+						"name": "MemberType",
+						"type": "nvarchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": {
+						"value": "@dataset().table_name",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/asa_dedicated_sql_pool')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/asa-workspace-practice-milgard-1-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('asa-workspace-practice-milgard-1-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/asa-workspace-practice-milgard-1-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('asa-workspace-practice-milgard-1-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/asa_dedicated_sql_pool')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"server": "[parameters('asa_dedicated_sql_pool_properties_typeProperties_server')]",
+					"database": "[parameters('asa_dedicated_sql_pool_properties_typeProperties_database')]",
+					"encrypt": "True",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('asa_dedicated_sql_pool_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('asa_dedicated_sql_pool_password')]"
+					},
+					"multipleActiveResultSets": "False"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Dataflow1')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "adls_asa_training_dynamic",
+								"type": "DatasetReference"
+							},
+							"name": "source1"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "sqlPool_asa_dedicated_milgard_dynamic",
+								"type": "DatasetReference"
+							},
+							"name": "sink1"
+						},
+						{
+							"dataset": {
+								"referenceName": "sqlPool_asa_dedicated_milgard_dynamic",
+								"type": "DatasetReference"
+							},
+							"name": "sink2"
+						},
+						{
+							"dataset": {
+								"referenceName": "sqlPool_asa_dedicated_milgard_dynamic",
+								"type": "DatasetReference"
+							},
+							"name": "sink3"
+						}
+					],
+					"transformations": [
+						{
+							"name": "flowlet1",
+							"flowlet": {
+								"referenceName": "Dataflow11",
+								"type": "DataFlowReference",
+								"parameters": {}
+							}
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "split1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          {Line Number} as short,",
+						"          Year as short,",
+						"          Month as string,",
+						"          State as string,",
+						"          {Labor Force} as integer,",
+						"          Employed as integer,",
+						"          Unemployed as integer,",
+						"          {Unemployment Rate} as double,",
+						"          Industry as string,",
+						"          Gender as string,",
+						"          {Education Level} as string,",
+						"          {Date Inserted} as date,",
+						"          InsertSource as string,",
+						"          {Data Version} as string,",
+						"          {Access Permission} as string,",
+						"          {Update Frequency} as string,",
+						"          {Aggregation Level} as string,",
+						"          {Data Accuracy} as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> source1",
+						"derivedColumn1 compose(mapColumn(",
+						"          {Line Number},",
+						"          Year,",
+						"          Month,",
+						"          State,",
+						"          {Labor Force},",
+						"          Employed,",
+						"          Unemployed,",
+						"          {Unemployment Rate},",
+						"          Industry,",
+						"          Gender,",
+						"          {Education Level},",
+						"          {Date Inserted},",
+						"          InsertSource,",
+						"          {Data Version},",
+						"          {Access Permission},",
+						"          {Update Frequency},",
+						"          {Aggregation Level},",
+						"          {Data Accuracy}",
+						"     ),",
+						"     composition: 'Dataflow11') ~> flowlet1@(output1)",
+						"source1 derive(Year_Month = concatWS('-', toString(Year), Month),",
+						"          Employment_Rate = (Employed/{Labor Force})*100) ~> derivedColumn1",
+						"flowlet1@output1 split(average_unemployment_rate>7,",
+						"     and(average_unemployment_rate>4, average_unemployment_rate <=7),",
+						"     disjoint: false) ~> split1@(highUnemplyement, mediumUnemployement, lowUnemployement)",
+						"split1@highUnemplyement sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Duration as integer,",
+						"          StartDate as timestamp,",
+						"          EndDate as timestamp,",
+						"          StartStationNumber as integer,",
+						"          StartStation as string,",
+						"          EndStationNumber as integer,",
+						"          EndStation as string,",
+						"          BikeNumber as string,",
+						"          MemberType as string",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     staged: true,",
+						"     allowCopyCommand: true,",
+						"     preSQLs:['CREATE TABLE dbo.highUnemployement(    \\nState NVARCHAR(2),    \\nYear INT,    \\naverage_unemployment_rate FLOAT,    \\nsum_unemployed INT\\n)\\nWITH(\\nDISTRIBUTION = HASH(state),\\nCLUSTERED COLUMSTORE INDEX\\n);'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink1",
+						"split1@mediumUnemployement sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Duration as integer,",
+						"          StartDate as timestamp,",
+						"          EndDate as timestamp,",
+						"          StartStationNumber as integer,",
+						"          StartStation as string,",
+						"          EndStationNumber as integer,",
+						"          EndStation as string,",
+						"          BikeNumber as string,",
+						"          MemberType as string",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     staged: true,",
+						"     allowCopyCommand: true,",
+						"     preSQLs:['CREATE TABLE dbo.mediumUnemployement(    \\nState NVARCHAR(2),    \\nYear INT,    \\naverage_unemployment_rate FLOAT,    \\nsum_unemployed INT\\n)\\nWITH(\\nDISTRIBUTION = HASH(state),\\nCLUSTERED COLUMSTORE INDEX\\n);'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink2",
+						"split1@lowUnemployement sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          Duration as integer,",
+						"          StartDate as timestamp,",
+						"          EndDate as timestamp,",
+						"          StartStationNumber as integer,",
+						"          StartStation as string,",
+						"          EndStationNumber as integer,",
+						"          EndStation as string,",
+						"          BikeNumber as string,",
+						"          MemberType as string",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:false,",
+						"     format: 'table',",
+						"     staged: true,",
+						"     allowCopyCommand: true,",
+						"     preSQLs:['CREATE TABLE dbo.lowUnemployement(    \\nState NVARCHAR(2),    \\nYear INT,    \\naverage_unemployment_rate FLOAT,    \\nsum_unemployed INT\\n)\\nWITH(\\nDISTRIBUTION = HASH(state),\\nCLUSTERED COLUMSTORE INDEX\\n);'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink3"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/dataflows/Dataflow11')]",
+				"[concat(variables('workspaceId'), '/datasets/adls_asa_training_dynamic')]",
+				"[concat(variables('workspaceId'), '/datasets/sqlPool_asa_dedicated_milgard_dynamic')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Dataflow11')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Flowlet",
+				"typeProperties": {
+					"sources": [],
+					"sinks": [],
+					"transformations": [
+						{
+							"name": "aggregate1"
+						},
+						{
+							"name": "input1"
+						},
+						{
+							"name": "output1"
+						}
+					],
+					"scriptLines": [
+						"input(output(",
+						"          {Line Number} as short,",
+						"          Year as short,",
+						"          Month as string,",
+						"          State as string,",
+						"          {Labor Force} as integer,",
+						"          Employed as integer,",
+						"          Unemployed as integer,",
+						"          {Unemployment Rate} as double,",
+						"          Industry as string,",
+						"          Gender as string,",
+						"          {Education Level} as string,",
+						"          {Date Inserted} as date,",
+						"          InsertSource as string,",
+						"          {Data Version} as string,",
+						"          {Access Permission} as string,",
+						"          {Update Frequency} as string,",
+						"          {Aggregation Level} as string,",
+						"          {Data Accuracy} as string",
+						"     ),",
+						"     order: 0,",
+						"     allowSchemaDrift: true) ~> input1",
+						"input1 aggregate(groupBy(State,",
+						"          Year),",
+						"     average_unemployment_rate = avg({Unemployment Rate}),",
+						"          sum_unemployed = sum(Unemployed)) ~> aggregate1",
+						"aggregate1 output() ~> output1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/bike_share query')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- CREATE TABLE dbo.bikeshare_raw (\n--     Duration INT,\n--     StartDate DATETIME2,\n--     EndDate DATETIME2,\n--     StartStationNumber INT,\n--     StartStation NVARCHAR(255),\n--     EndStationNumber INT,\n--     EndStation NVARCHAR(255),\n--     BikeNumber NVARCHAR(50),\n--     MemberType NVARCHAR(50)\n--     ) \n--     WITH (\n--         DISTRIBUTION = HASH(StartStationNumber),\n--         CLUSTERED COLUMNSTORE INDEX\n-- );\n\n-- SET SHOWPLAN_XML ON;\n\n-- EXPLAIN\nEXPLAIN WITH_RECOMMENDATIONS\nSELECT \n    StartStationNumber,\n    MONTH(StartDate) AS StartMonth,\n    YEAR(StartDate) AS StartYear,\n    COUNT(*) AS movement,\n    AVG(Duration) AS AverageDuration,\n    SUM(Duration) AS TotalDuration\nFROM dbo.bikeshare_raw\nGROUP BY StartStationNumber, MONTH(StartDate), Year(StartDate)\nORDER BY 1, 3, 2\n\n\nCREATE MATERIALIZED VIEW View1 WITH (DISTRIBUTION = HASH([Expr0])) AS \nSELECT \n    [az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[StartStationNumber] AS [Expr0], \n    datepart(month,[az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[StartDate]) AS [Expr1], \n    datepart(year,[az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[StartDate]) AS [Expr2], \n    COUNT(*) AS [Expr3], \n    AVG([az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[Duration]) AS [Expr4], \n    SUM([az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[Duration]) AS [Expr5], \n    COUNT_BIG([az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[Duration]) AS [Expr8] \nFROM [dbo].[bikeshare_raw] \nGROUP BY [az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[StartStationNumber], \n    datepart(month,[az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[StartDate]), \n    datepart(year,[az_dedicated_sql_pool_for_milgard_practice].[dbo].[bikeshare_raw].[StartDate])\n\nSELECT * FROM sys.dm_pdw_exec_requests\nORDER BY submit_time DESC\n\nSHOW_STATISTICS dbo.bikeshare_raw;\n\nUPDATE STATISTICS dbo.bikeshare_raw WITH FULLSCAN;\n\n\nWITH request_steps AS(\nSELECT request_id, command, total_elapsed_time, operation_type, step_index\nFROM sys.dm_pdw_request_steps\nWHERE request_id IN ('QID595')\n-- ORDER BY request_id, step_index\n)\nSELECT \n    distribution_id, dpsr.total_elapsed_time\n    -- rs.operation_type, rs.total_elapsed_time, dpsr.*\nFROM sys.dm_pdw_sql_requests dpsr\nJOIN request_steps rs\n    ON dpsr.request_id = rs.request_id AND dpsr.step_index = rs.step_index AND rs.total_elapsed_time>150 AND operation_type = 'ShuffleMoveOperation'\nORDER BY rs.step_index\n\n\nDBCC PDW_SHOWSPACEUSED(\"dbo.bikeshare_raw\")\n\n-- GO\n-- WITH qids AS (\n-- SELECT\n--     request_id,\n--     status,\n--     submit_time,\n--     total_elapsed_time,\n--     command\n-- FROM\n--     sys.dm_pdw_exec_requests\n-- WHERE\n--     session_id = SESSION_ID() -- Gets only queries from your current window\n-- )\n\n-- SELECT \n--     request_id,\n--     command\n-- FROM sys.dm_pdw_sql_requests\n-- SELECT\n--     step_index,\n--     operation_type,\n--     total_elapsed_time,\n--     row_count,\n--     command\n-- FROM\n--     sys.dm_pdw_request_steps\n-- WHERE request_id in (SELECT request_id FROM qids)\n-- ORDER BY\n--     total_elapsed_time DESC; -- Sort by the longest step first",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "az_dedicated_sql_pool_for_milgard_practice",
+						"poolName": "az_dedicated_sql_pool_for_milgard_practice"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/az_dedicated_sql_pool_for_milgard_practice')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "westus"
+		}
+	]
+}
