@@ -2,10 +2,15 @@
 	"name": "sql_pool_high_employment",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "asa_dedicated_sql_pool",
+			"referenceName": "asa_dedicated_sql_pool_1",
 			"type": "LinkedServiceReference",
 			"parameters": {
-				"sql_password": "Azure777!"
+				"test_name": "test_value"
+			}
+		},
+		"parameters": {
+			"table_name": {
+				"type": "string"
 			}
 		},
 		"annotations": [],
@@ -30,6 +35,13 @@
 				"type": "int",
 				"precision": 10
 			}
-		]
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": {
+				"value": "@dataset().table_name",
+				"type": "Expression"
+			}
+		}
 	}
 }

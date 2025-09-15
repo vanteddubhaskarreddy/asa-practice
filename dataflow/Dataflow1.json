@@ -22,14 +22,14 @@
 				},
 				{
 					"dataset": {
-						"referenceName": "sql_pool_medium_employment",
+						"referenceName": "sql_pool_high_employment",
 						"type": "DatasetReference"
 					},
 					"name": "sink2"
 				},
 				{
 					"dataset": {
-						"referenceName": "sql_pool_low_employment",
+						"referenceName": "sql_pool_high_employment",
 						"type": "DatasetReference"
 					},
 					"name": "sink3"
@@ -97,8 +97,8 @@
 				"     composition: 'Dataflow11') ~> flowlet1@(output1)",
 				"source1 derive(Year_Month = concatWS('-', toString(Year), Month),",
 				"          Employment_Rate = (Employed/{Labor Force})*100) ~> derivedColumn1",
-				"flowlet1@output1 split(average_unemployment_rate>7,",
-				"     and(average_unemployment_rate>4, average_unemployment_rate <=7),",
+				"flowlet1@output1 split(average_unemployment_rate*100>11,",
+				"     and(average_unemployment_rate*100>9, average_unemployment_rate*100 <=11),",
 				"     disjoint: false) ~> split1@(highUnemplyement, mediumUnemployement, lowUnemployement)",
 				"split1@highUnemplyement sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
@@ -112,6 +112,7 @@
 				"     insertable:true,",
 				"     updateable:false,",
 				"     upsertable:false,",
+				"     truncate:true,",
 				"     format: 'table',",
 				"     staged: true,",
 				"     allowCopyCommand: true,",
@@ -130,6 +131,7 @@
 				"     insertable:true,",
 				"     updateable:false,",
 				"     upsertable:false,",
+				"     truncate:true,",
 				"     format: 'table',",
 				"     staged: true,",
 				"     allowCopyCommand: true,",
@@ -148,6 +150,7 @@
 				"     insertable:true,",
 				"     updateable:false,",
 				"     upsertable:false,",
+				"     truncate:true,",
 				"     format: 'table',",
 				"     staged: true,",
 				"     allowCopyCommand: true,",

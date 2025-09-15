@@ -1,0 +1,17 @@
+{
+	"name": "serverless_task-1",
+	"properties": {
+		"content": {
+			"query": "CREATE DATABASE training;\n\n\nCREATE EXTERNAL DATA SOURCE BikeShareStorage\nWITH(\n    LOCATION='https://practicestoragemilgard.blob.core.windows.net/training/raw/bike_share/2017-capitalbikeshare-tripdata/'\n);\n\nSELECT TOP 100 *\nFROM OPENROWSET(\n    BULK '*',\n    DATA_SOURCE='BikeShareStorage',\n    FORMAT = 'CSV',\n    PARSER_VERSION = '2.0',\n    HEADER_ROW = TRUE\n) AS [result];",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "training",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
