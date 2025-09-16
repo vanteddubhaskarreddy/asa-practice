@@ -1,0 +1,17 @@
+{
+	"name": "dedicatedsql pool query-1",
+	"properties": {
+		"content": {
+			"query": "CREATE TABLE fairy_tail_qa_1 (\n    story_name VARCHAR(200),\n    story_section VARCHAR(8000),\n    question VARCHAR(8000),\n    answerl VARCHAR(8000),\n    answer2 VARCHAR(8000),\n    local_or_sum VARCHAR(100),\n    attribute VARCHAR(20),\n    ex_or_m VARCHAR(8),\n    ex_or_im2 VARCHAR(8)\n)\nWITH(\n    DISTRIBUTION = ROUND_ROBIN,\n    HEAP\n)\n\nALTER TABLE fairy_tail_qa_1 \nALTER COLUMN local_or_sum VARCHAR(12);\n\nCOPY INTO fairy_tail_qa_1\nFROM 'https://practicestoragemilgard.blob.core.windows.net/training/raw/fairy_tail_qa/train.csv'\nWITH (\n    FILE_TYPE='CSV'\n)\n\nSELECT DISTINCT local_or_sum FROM fairy_tail_qa_1",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "az_dedicated_sql_pool_for_milgard_practice",
+				"poolName": "az_dedicated_sql_pool_for_milgard_practice"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

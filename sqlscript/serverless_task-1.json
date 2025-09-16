@@ -2,7 +2,7 @@
 	"name": "serverless_task-1",
 	"properties": {
 		"content": {
-			"query": "CREATE DATABASE training;\n\n\nCREATE EXTERNAL DATA SOURCE BikeShareStorage\nWITH(\n    LOCATION='https://practicestoragemilgard.blob.core.windows.net/training/raw/bike_share/2017-capitalbikeshare-tripdata/'\n);\n\nSELECT TOP 100 *\nFROM OPENROWSET(\n    BULK '*',\n    DATA_SOURCE='BikeShareStorage',\n    FORMAT = 'CSV',\n    PARSER_VERSION = '2.0',\n    HEADER_ROW = TRUE\n) AS [result];",
+			"query": "CREATE DATABASE training;\n\n\nCREATE EXTERNAL DATA SOURCE RawStorage1\nWITH(\n    LOCATION='https://practicestoragemilgard.blob.core.windows.net/training/raw/'\n);\n\nSELECT COUNT(*)\nFROM OPENROWSET(\n    BULK '*',\n    DATA_SOURCE='BikeShareStorage',\n    FORMAT = 'CSV',\n    PARSER_VERSION = '2.0',\n    HEADER_ROW = TRUE\n) AS [result];\n\n-- https://practicestoragemilgard.blob.core.windows.net/training/raw/fairy_tail_qa/train.csv\n\nSELECT DISTINCT *\nFROM OPENROWSET(\n    BULK 'fairy_tail_qa/*',\n    DATA_SOURCE = 'RawStorage1',\n    FORMAT='CSV',\n    PARSER_VERSION='2.0',\n    HEADER_ROW=TRUE\n)AS [result];\n\n\n\n\n-- This is just the query text we will use as input\nDECLARE @tsqlQuery NVARCHAR(MAX) = N'\n    SELECT *\n    FROM OPENROWSET(\n        BULK ''fairy_tail_qa/train.csv'',\n        DATA_SOURCE = ''RawStorage1'',\n        FORMAT = ''CSV'',\n        PARSER_VERSION = ''2.0'',\n        HEADER_ROW = TRUE\n    ) AS Result;'\n\n\n    -- This executes the procedure, passing in the query from Step 1\nEXEC sp_describe_first_result_set @tsql = @tsqlQuery;",
 			"metadata": {
 				"language": "sql"
 			},
